@@ -1,18 +1,7 @@
 import { pipe } from "fp-ts/function";
 import * as D from "io-ts/Decoder";
-import { validate as uuidValidate } from "uuid";
 import { BunnyRegion } from "./region.js";
-import { arrayEquals, arrayToHex, decode, hexDecoder } from "./util.js";
-
-const uuidDecoder: D.Decoder<unknown, string> = pipe(
-    D.string,
-    D.parse((uuid: string) => {
-        if (uuidValidate(uuid))
-            return D.success(uuid);
-        else
-            return D.failure(uuid, "Malformed UUID");
-    })
-)
+import { arrayEquals, arrayToHex, decode, hexDecoder, uuidDecoder } from "./util.js";
 
 export const bunnyFileEntry = Symbol();
 export const bunnyDirectoryEntry = Symbol();
@@ -101,7 +90,7 @@ function getHost(region?: BunnyRegion): string {
     return `${region}.storage.bunnycdn.com`;
 }
 
-class AbstractBunnyEntry {
+class AbstractBunnyEntry implements BunnyBasicEntry {
     constructor(
         private readonly storage: BunnyStorage,
         readonly type: typeof bunnyFileEntry | typeof bunnyDirectoryEntry,

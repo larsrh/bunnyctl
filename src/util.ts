@@ -1,6 +1,17 @@
 import { pipe } from "fp-ts/function";
 import { fold } from "fp-ts/Either";
 import * as D from "io-ts/Decoder";
+import { validate as uuidValidate } from "uuid";
+
+export const uuidDecoder: D.Decoder<unknown, string> = pipe(
+    D.string,
+    D.parse((uuid: string) => {
+        if (uuidValidate(uuid))
+            return D.success(uuid);
+        else
+            return D.failure(uuid, "Malformed UUID");
+    })
+);
 
 export function decode<T>(decoder: D.Decoder<any, T>, input: any): T {
     return pipe(
