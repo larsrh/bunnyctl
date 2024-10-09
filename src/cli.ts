@@ -32,7 +32,7 @@ function getStorage({ apiKey, storageZone, region: rawRegion }: Config): BunnySt
     if (rawRegion) {
         if (!(rawRegion in BunnyRegion))
             throw new Error(`Unknown region '${rawRegion}`);
-        region = BunnyRegion[rawRegion];
+        region = BunnyRegion[rawRegion as keyof typeof BunnyRegion];
     }
     return new BunnyStorage(
         apiKey || process.env.BUNNY_API_KEY,
@@ -123,6 +123,7 @@ export async function runCLI(args: string[]) {
         await run(app, args);
     }
     catch (ex) {
+        // eslint-disable-next-line
         console.error(ex.toString());
         process.exit(1);
     }

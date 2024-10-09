@@ -254,7 +254,7 @@ export class BunnyStorage {
         const response = await this.fetch(path, { method: "DESCRIBE" });
         if (response.headers.get("Content-Type") != "application/json")
             throw new Error("Unexpected Content-Type in response");
-        const json = await response.json();
+        const json: unknown = await response.json();
         const entry = decode(bunnyEntryDecoder, json);
         return this.parseEntry(entry) as BunnyFileEntry;
     }
@@ -281,7 +281,7 @@ export class BunnyStorage {
             throw new Error(`Expected a directory, but '${path}' is a file`);
         if (response.headers.get("Content-Type") != "application/json")
             throw new Error("Unexpected Content-Type in response");
-        const json = await response.json();
+        const json: unknown = await response.json();
         const listing = decode(bunnyListingDecoder, json);
         return listing.map(entry => this.parseEntry(entry));
     }

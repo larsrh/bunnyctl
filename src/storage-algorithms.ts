@@ -1,4 +1,4 @@
-import { isBunnyFile, type BunnyStorage, type BunnyDirectoryEntry, type BunnyEntry, type BunnyFileEntry, type BunnyListing } from "./storage.js";
+import { isBunnyFile, type BunnyStorage, type BunnyDirectoryEntry, type BunnyEntry, type BunnyFileEntry } from "./storage.js";
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import { arrayDiff, arrayEquals, coalesce } from "./util.js";

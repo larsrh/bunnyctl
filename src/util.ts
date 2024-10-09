@@ -2,7 +2,7 @@ import { pipe } from "fp-ts/function";
 import { fold } from "fp-ts/Either";
 import * as D from "io-ts/Decoder";
 
-export function decode<T>(decoder: D.Decoder<any, T>, input: any): T {
+export function decode<T>(decoder: D.Decoder<unknown, T>, input: unknown): T {
     return pipe(
         decoder.decode(input),
         fold(
@@ -46,7 +46,7 @@ export function arrayEquals<T>(expected: ArrayLike<T>, actual: ArrayLike<T>): bo
     if (expected.length != actual.length)
         return false;
 
-    for (let i in actual)
+    for (const i in actual)
         if (actual[i] != expected[i])
             return false;
     return true;
