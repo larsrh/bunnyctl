@@ -127,9 +127,30 @@ const diff = command({
     }
 });
 
+const rm = command({
+    name: "rm",
+    args: {
+        path: positional({
+            type: string,
+            displayName: "PATH"
+        }),
+        recursive: flag({
+            type: boolean,
+            long: "recursive",
+            short: "r"
+        }),
+        ...configParser
+    },
+    handler: async args => {
+        const storage = getStorage(args);
+        const entry = await Algorithms.loadPath(storage, args.path);
+        await entry.delete(args.recursive);
+    }
+});
+
 const app = subcommands({
     name: "bunnyctl",
-    cmds: { cat, diff, ls }
+    cmds: { cat, diff, ls, rm }
 });
 
 async function runCLI(args: string[]) {

@@ -291,13 +291,15 @@ export class BunnyStorage {
     }
 
     cd(path: string = "/"): BunnyDirectoryEntry {
-        const { dir, base } = p.parse(path);
+        const parsed = p.parse(path);
+        let dir = parsed.dir;
+        if (!dir.endsWith("/")) dir += "/";
 
         return new AbstractBunnyEntry(
             this,
             bunnyDirectoryEntry,
             dir,
-            base,
+            parsed.base,
             0,
             undefined
         );
