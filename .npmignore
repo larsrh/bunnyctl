@@ -1,0 +1,9 @@
+src
+lib/test/**/*
+.github
+.envrc
+.editorconfig
+.gitignore
+.npmignore
+eslint.config.mjs
+bunnyctl-*.tgz
