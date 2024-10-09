@@ -1,6 +1,6 @@
 {
     "name": "bunnyctl",
-    "version": "0.0.1",
+    "version": "0.0.2",
     "description": "CLI and TS/JS library for Bunny.net API operations",
     "type": "module",
     "main": "lib/index.js",
