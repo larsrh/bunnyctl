@@ -21,17 +21,18 @@ export const hexDecoder: D.Decoder<unknown, Uint8Array> = pipe(
             return D.failure(hex, "Malformed digest");
         const array = new Uint8Array(hex.length / 2);
         for (let i = 0; i < hex.length; i += 2) {
-            const item = parseInt(hex.slice(i, i + 2), 16)
-            if (isNaN(item))
-                return D.failure(hex, "Malformed digest");
+            const item = parseInt(hex.slice(i, i + 2), 16);
+            if (isNaN(item)) return D.failure(hex, "Malformed digest");
             array[i / 2] = item;
         }
         return D.success(array);
     })
-)
+);
 
 export function arrayToHex(array: Uint8Array): string {
-    return Array.from(array).map(b => b.toString(16).padStart(2, "0")).join("");
+    return Array.from(array)
+        .map(b => b.toString(16).padStart(2, "0"))
+        .join("");
 }
 
 export function hexToArray(hex: string): Uint8Array {
@@ -42,17 +43,20 @@ export interface ArrayLike<T> extends RelativeIndexable<T> {
     length: number;
 }
 
-export function arrayEquals<T>(expected: ArrayLike<T>, actual: ArrayLike<T>): boolean {
-    if (expected.length != actual.length)
-        return false;
+export function arrayEquals<T>(
+    expected: ArrayLike<T>,
+    actual: ArrayLike<T>
+): boolean {
+    if (expected.length != actual.length) return false;
 
-    for (const i in actual)
-        if (actual[i] != expected[i])
-            return false;
+    for (const i in actual) if (actual[i] != expected[i]) return false;
     return true;
 }
 
-export function arrayDiff<T>(left: T[], right: T[]): { onlyLeft: T[], onlyRight: T[], both: T[] } {
+export function arrayDiff<T>(
+    left: T[],
+    right: T[]
+): { onlyLeft: T[]; onlyRight: T[]; both: T[] } {
     const leftSet = new Set(left);
     const rightSet = new Set(right);
 
@@ -63,8 +67,7 @@ export function arrayDiff<T>(left: T[], right: T[]): { onlyLeft: T[], onlyRight:
         if (rightSet.has(l)) {
             both.push(l);
             rightSet.delete(l);
-        }
-        else {
+        } else {
             onlyLeft.push(l);
         }
     }

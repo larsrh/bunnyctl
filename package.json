@@ -1,26 +1,33 @@
 {
-  "name": "bunnyctl",
-  "version": "0.0.0",
-  "description": "CLI and TS/JS library for Bunny.net API operations",
-  "main": "index.js",
-  "scripts": {
-    "lint": "eslint",
-    "test": "echo \"Error: no test specified\" && exit 1"
-  },
-  "author": "Lars Hupel",
-  "license": "Apache-2.0",
-  "devDependencies": {
-    "@eslint/js": "^9.12.0",
-    "@types/eslint__js": "^8.42.3",
-    "@types/node": "^22.7.4",
-    "@types/uuid": "^10.0.0",
-    "eslint": "^9.12.0",
-    "tsx": "^4.19.1",
-    "typescript": "^5.6.3",
-    "typescript-eslint": "^8.8.1"
-  },
-  "dependencies": {
-    "cmd-ts": "^0.13.0",
-    "io-ts": "^2.2.21"
-  }
+    "name": "bunnyctl",
+    "version": "0.0.0",
+    "description": "CLI and TS/JS library for Bunny.net API operations",
+    "main": "index.js",
+    "scripts": {
+        "lint": "eslint",
+        "test": "echo \"Error: no test specified\" && exit 1"
+    },
+    "author": "Lars Hupel",
+    "license": "Apache-2.0",
+    "devDependencies": {
+        "@eslint/js": "^9.12.0",
+        "@types/eslint__js": "^8.42.3",
+        "@types/node": "^22.7.4",
+        "@types/uuid": "^10.0.0",
+        "eslint": "^9.12.0",
+        "eslint-config-prettier": "^9.1.0",
+        "eslint-plugin-prettier": "^5.2.1",
+        "prettier": "3.3.3",
+        "tsx": "^4.19.1",
+        "typescript": "^5.6.3",
+        "typescript-eslint": "^8.8.1"
+    },
+    "dependencies": {
+        "cmd-ts": "^0.13.0",
+        "io-ts": "^2.2.21"
+    },
+    "prettier": {
+        "trailingComma": "none",
+        "arrowParens": "avoid"
+    }
 }

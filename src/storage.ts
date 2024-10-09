@@ -16,7 +16,7 @@ export interface BunnyBasicEntry {
     path: string;
 
     format(): string;
-    delete(recursive: boolean): Promise<void>
+    delete(recursive: boolean): Promise<void>;
 }
 
 export interface BunnyFileEntry extends BunnyBasicEntry {
@@ -25,9 +25,9 @@ export interface BunnyFileEntry extends BunnyBasicEntry {
     length: number;
     checksum: Uint8Array;
 
-    download(validate?: boolean): Promise<Uint8Array>
+    download(validate?: boolean): Promise<Uint8Array>;
     replace(body: Uint8Array): Promise<BunnyFileEntry>;
-    delete(): Promise<void>
+    delete(): Promise<void>;
 }
 
 export interface BunnyDirectoryEntry extends BunnyBasicEntry {
@@ -44,7 +44,9 @@ export function isBunnyFile(entry: BunnyEntry): entry is BunnyFileEntry {
     return entry.type == bunnyFileEntry;
 }
 
-export function isBunnyDirectory(entry: BunnyEntry): entry is BunnyDirectoryEntry {
+export function isBunnyDirectory(
+    entry: BunnyEntry
+): entry is BunnyDirectoryEntry {
     return entry.type == bunnyDirectoryEntry;
 }
 
@@ -57,26 +59,37 @@ const bunnyEntryDecoder = pipe(
         Length: D.number,
         Checksum: D.nullable(hexDecoder)
     }),
-    D.parse(({ StorageZoneName, Path, ObjectName, IsDirectory, Length, Checksum }) => {
-        if (!Path.startsWith(`/${StorageZoneName}/`))
-            return D.failure(Path, "Expected path to start with the storage zone name");
-        if (ObjectName.includes("/"))
-            return D.failure(ObjectName, "Unexpected / in object name");
+    D.parse(
+        ({
+            StorageZoneName,
+            Path,
+            ObjectName,
+            IsDirectory,
+            Length,
+            Checksum
+        }) => {
+            if (!Path.startsWith(`/${StorageZoneName}/`))
+                return D.failure(
+                    Path,
+                    "Expected path to start with the storage zone name"
+                );
+            if (ObjectName.includes("/"))
+                return D.failure(ObjectName, "Unexpected / in object name");
 
-        // strip the prefix containing the storage zone name, including first and second slash
-        let cleanPath = Path.slice(Path.indexOf('/', 1) + 1);
-        // unless it's the root of that storage zone, in which case we need to use '/'
-        if (cleanPath == "")
-            cleanPath = "/";
+            // strip the prefix containing the storage zone name, including first and second slash
+            let cleanPath = Path.slice(Path.indexOf("/", 1) + 1);
+            // unless it's the root of that storage zone, in which case we need to use '/'
+            if (cleanPath == "") cleanPath = "/";
 
-        return D.success({
-            parentPath: cleanPath,
-            name: ObjectName,
-            isDirectory: IsDirectory,
-            length: Length,
-            checksum: Checksum
-        })
-    })
+            return D.success({
+                parentPath: cleanPath,
+                name: ObjectName,
+                isDirectory: IsDirectory,
+                length: Length,
+                checksum: Checksum
+            });
+        }
+    )
 );
 
 const bunnyListingDecoder = D.array(bunnyEntryDecoder);
@@ -98,9 +111,13 @@ class AbstractBunnyEntry<T extends BunnyType> implements BunnyBasicEntry {
         readonly checksum: Uint8Array
     ) {
         if ((type == bunnyDirectoryEntry) != !checksum)
-            throw new Error(`Mismatch between directory flag and presence of checksum`);
+            throw new Error(
+                `Mismatch between directory flag and presence of checksum`
+            );
         if (!parentPath.endsWith("/"))
-            throw new Error(`Expected parent path '${parentPath}' to end with /`)
+            throw new Error(
+                `Expected parent path '${parentPath}' to end with /`
+            );
     }
 
     get path() {
@@ -108,8 +125,7 @@ class AbstractBunnyEntry<T extends BunnyType> implements BunnyBasicEntry {
     }
 
     list() {
-        if (this.type == bunnyFileEntry)
-            throw new Error("Cannot list a file");
+        if (this.type == bunnyFileEntry) throw new Error("Cannot list a file");
 
         return this.storage.list(this.path);
     }
@@ -137,7 +153,9 @@ class AbstractBunnyEntry<T extends BunnyType> implements BunnyBasicEntry {
 
     delete(recursive: boolean = false) {
         if (this.type == bunnyDirectoryEntry && !recursive)
-            throw new Error("Cannot delete a directory without 'recursive' set to true")
+            throw new Error(
+                "Cannot delete a directory without 'recursive' set to true"
+            );
 
         return this.storage.delete(this.path);
     }
@@ -146,11 +164,10 @@ class AbstractBunnyEntry<T extends BunnyType> implements BunnyBasicEntry {
         let symbol: string;
         let fileProps = "";
         if (this.type == bunnyFileEntry) {
-            symbol = '🗒️';
+            symbol = "🗒️";
             fileProps = ` (length = ${this.length}, checksum = ${arrayToHex(this.checksum)})`;
-        }
-        else {
-            symbol = '📁';
+        } else {
+            symbol = "📁";
         }
 
         return `${symbol} ${this.name}${fileProps}`;
@@ -158,9 +175,9 @@ class AbstractBunnyEntry<T extends BunnyType> implements BunnyBasicEntry {
 }
 
 interface FetchParameters {
-    method?: string,
-    checksum?: Uint8Array,
-    body?: BodyInit
+    method?: string;
+    checksum?: Uint8Array;
+    body?: BodyInit;
 }
 
 export class BunnyStorage {
@@ -168,7 +185,7 @@ export class BunnyStorage {
 
     private makeRequestHeaders(checksum?: Uint8Array): Headers {
         const headers = new Headers({
-            'AccessKey': this.apiKey
+            AccessKey: this.apiKey
         });
         if (checksum) {
             // this is an upload, so we can also set the content type of the request body
@@ -178,9 +195,12 @@ export class BunnyStorage {
         return headers;
     }
 
-    constructor(private readonly apiKey: string, storageZone: string, region?: BunnyRegion) {
-        if (storageZone.includes("/"))
-            throw new Error(`Storage zone `);
+    constructor(
+        private readonly apiKey: string,
+        storageZone: string,
+        region?: BunnyRegion
+    ) {
+        if (storageZone.includes("/")) throw new Error(`Storage zone `);
         this.baseURL = `https://${getHost(region)}/${storageZone}`;
     }
 
@@ -188,20 +208,18 @@ export class BunnyStorage {
         path: string,
         { method, checksum, body }: FetchParameters = {}
     ): Promise<Response> {
-        if (path.startsWith("/"))
-            path = path.slice(1);
+        if (path.startsWith("/")) path = path.slice(1);
 
-        const response = await fetch(
-            `${this.baseURL}/${path}`,
-            {
-                method,
-                body,
-                headers: this.makeRequestHeaders(checksum)
-            }
-        );
+        const response = await fetch(`${this.baseURL}/${path}`, {
+            method,
+            body,
+            headers: this.makeRequestHeaders(checksum)
+        });
 
         if (!response.ok)
-            throw new Error(`Request for path '${path}' failed with status ${response.status}`);
+            throw new Error(
+                `Request for path '${path}' failed with status ${response.status}`
+            );
         return response;
     }
 
@@ -216,18 +234,27 @@ export class BunnyStorage {
         );
     }
 
-    async download(path: string, expectedChecksum?: Uint8Array): Promise<Uint8Array> {
+    async download(
+        path: string,
+        expectedChecksum?: Uint8Array
+    ): Promise<Uint8Array> {
         if (path.endsWith("/"))
-            throw new Error(`Cannot download directory '${path}'; file expected`);
+            throw new Error(
+                `Cannot download directory '${path}'; file expected`
+            );
         const response = await this.fetch(path);
         if (!response.headers.has("ETag"))
             throw new Error(`Expected a file, but '${path}' is a directory`);
 
         const body = new Uint8Array(await response.arrayBuffer());
         if (expectedChecksum) {
-            const checksum = new Uint8Array(await crypto.subtle.digest("SHA-256", body));
+            const checksum = new Uint8Array(
+                await crypto.subtle.digest("SHA-256", body)
+            );
             if (!arrayEquals(expectedChecksum, checksum))
-                throw new Error(`Checksum mismatch: expected ${arrayToHex(expectedChecksum)}, received ${arrayToHex(checksum)}`);
+                throw new Error(
+                    `Checksum mismatch: expected ${arrayToHex(expectedChecksum)}, received ${arrayToHex(checksum)}`
+                );
         }
 
         return body;
@@ -237,7 +264,9 @@ export class BunnyStorage {
         if (path.endsWith("/"))
             throw new Error(`Cannot upload directory '${path}'; file expected`);
 
-        const checksum = new Uint8Array(await crypto.subtle.digest("SHA-256", body));
+        const checksum = new Uint8Array(
+            await crypto.subtle.digest("SHA-256", body)
+        );
 
         await this.fetch(path, { method: "PUT", body, checksum });
 
@@ -250,7 +279,9 @@ export class BunnyStorage {
 
     async describe(path: string): Promise<BunnyFileEntry> {
         if (path.endsWith("/"))
-            throw new Error(`Cannot describe directory '${path}'; file expected`);
+            throw new Error(
+                `Cannot describe directory '${path}'; file expected`
+            );
         const response = await this.fetch(path, { method: "DESCRIBE" });
         if (response.headers.get("Content-Type") != "application/json")
             throw new Error("Unexpected Content-Type in response");
@@ -274,8 +305,7 @@ export class BunnyStorage {
 
     async list(path?: string): Promise<BunnyListing> {
         path = path || "";
-        if (path != "" && !path.endsWith("/"))
-            path += "/";
+        if (path != "" && !path.endsWith("/")) path += "/";
         const response = await this.fetch(path);
         if (response.headers.has("ETag"))
             throw new Error(`Expected a directory, but '${path}' is a file`);

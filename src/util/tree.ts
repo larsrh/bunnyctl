@@ -5,8 +5,8 @@ interface Strings {
 
 const strings = {
     child: "├─",
-    spacer: "| ",
-}
+    spacer: "| "
+};
 
 const lastStrings = {
     child: "└─",
@@ -15,23 +15,18 @@ const lastStrings = {
 
 function prefixForChild(array: string[], strings: Strings): string[] {
     const [head, ...tail] = array;
-    return [
-        strings.child + head,
-        ...tail.map(t => strings.spacer + t)
-    ];
+    return [strings.child + head, ...tail.map(t => strings.spacer + t)];
 }
 
 export class Tree<T> {
     constructor(
         readonly value: T,
         readonly children: Tree<T>[] = []
-    ) { }
-
+    ) {}
 
     format(fn: (t: T) => string): string[] {
         const self = fn(this.value);
-        if (this.children.length == 0)
-            return [self];
+        if (this.children.length == 0) return [self];
 
         const childrens = this.children.map(child => child.format(fn));
 
@@ -43,5 +38,4 @@ export class Tree<T> {
             ...prefixForChild(lastChild, lastStrings)
         ];
     }
-
 }

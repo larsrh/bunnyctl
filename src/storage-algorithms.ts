@@ -1,4 +1,10 @@
-import { isBunnyFile, type BunnyStorage, type BunnyDirectoryEntry, type BunnyEntry, type BunnyFileEntry } from "./storage.js";
+import {
+    isBunnyFile,
+    type BunnyStorage,
+    type BunnyDirectoryEntry,
+    type BunnyEntry,
+    type BunnyFileEntry
+} from "./storage.js";
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import { arrayDiff, arrayEquals, coalesce } from "./util.js";
@@ -11,12 +17,10 @@ export class Difference {
         readonly localPath?: string,
         readonly remotePath?: string,
         readonly type?: DifferenceType
-    ) {
-    }
+    ) {}
 
     format(): string {
-        if (!this.type)
-            return `📁 ${this.remotePath}`;
+        if (!this.type) return `📁 ${this.remotePath}`;
 
         switch (this.type) {
             case "onlyLocal":
@@ -33,61 +37,87 @@ export class Difference {
 
 export type PathDifference = Tree<Difference>;
 
-export async function diffFiles(localPath: string, remoteFile: BunnyFileEntry): Promise<PathDifference | undefined> {
+export async function diffFiles(
+    localPath: string,
+    remoteFile: BunnyFileEntry
+): Promise<PathDifference | undefined> {
     const stat = await fs.stat(localPath);
 
     if (!stat.isFile)
         return new Tree(new Difference(localPath, remoteFile.path, "type"));
 
     const localFile = await fs.readFile(localPath);
-    const localChecksum = new Uint8Array(await crypto.subtle.digest("SHA-256", localFile));
+    const localChecksum = new Uint8Array(
+        await crypto.subtle.digest("SHA-256", localFile)
+    );
     if (!arrayEquals(remoteFile.checksum, localChecksum))
         return new Tree(new Difference(localPath, remoteFile.path, "contents"));
 }
 
-export async function diffDirectories(localPath: string, remoteDirectory: BunnyDirectoryEntry, recursive: boolean): Promise<PathDifference | undefined> {
+export async function diffDirectories(
+    localPath: string,
+    remoteDirectory: BunnyDirectoryEntry,
+    recursive: boolean
+): Promise<PathDifference | undefined> {
     const stat = await fs.stat(localPath);
 
     if (!stat.isDirectory)
-        return new Tree(new Difference(localPath, remoteDirectory.path, "type"));
+        return new Tree(
+            new Difference(localPath, remoteDirectory.path, "type")
+        );
 
     const remoteEntries = await remoteDirectory.list();
-    const remoteEntriesDict = Object.fromEntries(remoteEntries.map(entry => [entry.name, entry]));
-
-    const { onlyLeft: onlyLocal, onlyRight: onlyRemote, both } = arrayDiff(
-        await fs.readdir(localPath),
-        Object.keys(remoteEntriesDict)
+    const remoteEntriesDict = Object.fromEntries(
+        remoteEntries.map(entry => [entry.name, entry])
     );
+
+    const {
+        onlyLeft: onlyLocal,
+        onlyRight: onlyRemote,
+        both
+    } = arrayDiff(await fs.readdir(localPath), Object.keys(remoteEntriesDict));
 
     let children: PathDifference[] = [];
     if (recursive)
-        children = coalesce(await Promise.all(
-            both.map(name =>
-                diffPaths(path.join(localPath, name), remoteEntriesDict[name], true)
+        children = coalesce(
+            await Promise.all(
+                both.map(name =>
+                    diffPaths(
+                        path.join(localPath, name),
+                        remoteEntriesDict[name],
+                        true
+                    )
+                )
             )
-        ));
+        );
 
     if (onlyLocal.length > 0 || onlyRemote.length > 0 || children.length > 0)
-        return new Tree(
-            new Difference(localPath, remoteDirectory.path),
-            [
-                ...onlyLocal.map(l => new Tree(new Difference(l, undefined, "onlyLocal"))),
-                ...onlyRemote.map(r => new Tree(new Difference(undefined, r, "onlyRemote"))),
-                ...children
-            ]
-        )
+        return new Tree(new Difference(localPath, remoteDirectory.path), [
+            ...onlyLocal.map(
+                l => new Tree(new Difference(l, undefined, "onlyLocal"))
+            ),
+            ...onlyRemote.map(
+                r => new Tree(new Difference(undefined, r, "onlyRemote"))
+            ),
+            ...children
+        ]);
 }
 
-export async function diffPaths(localPath: string, remote: BunnyEntry, recursive: boolean = false): Promise<PathDifference | undefined> {
-    if (isBunnyFile(remote))
-        return diffFiles(localPath, remote);
+export async function diffPaths(
+    localPath: string,
+    remote: BunnyEntry,
+    recursive: boolean = false
+): Promise<PathDifference | undefined> {
+    if (isBunnyFile(remote)) return diffFiles(localPath, remote);
 
     return diffDirectories(localPath, remote, recursive);
 }
 
-export async function loadPath(storage: BunnyStorage, path: string): Promise<BunnyEntry> {
-    if (path.endsWith("/"))
-        return storage.cd(path);
+export async function loadPath(
+    storage: BunnyStorage,
+    path: string
+): Promise<BunnyEntry> {
+    if (path.endsWith("/")) return storage.cd(path);
 
     return storage.describe(path);
 }
