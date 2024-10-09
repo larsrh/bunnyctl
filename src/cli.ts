@@ -3,7 +3,7 @@ import { ExistingPath } from 'cmd-ts/batteries/fs';
 import { BunnyListing, BunnyStorage } from "./storage.js";
 import { BunnyRegion } from "./region.js";
 import { hexToArray } from "./util.js";
-import { diffPaths } from "./storage-algorithms.js";
+import * as Algorithms from "./storage-algorithms.js";
 
 interface Config {
     apiKey?: string;
@@ -104,7 +104,8 @@ const diff = command({
     },
     handler: async args => {
         const storage = getStorage(args);
-        const differences = await diffPaths(storage, args.localPath, args.remotePath, args.recursive);
+        const entry = await Algorithms.loadPath(storage, args.remotePath);
+        const differences = await Algorithms.diffPaths(args.localPath, entry, args.recursive);
         if (differences)
             console.log(differences.format(d => d.format()).join("\n"));
         else

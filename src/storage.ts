@@ -1,19 +1,19 @@
 import { pipe } from "fp-ts/function";
 import * as D from "io-ts/Decoder";
 import { BunnyRegion } from "./region.js";
-import { arrayEquals, arrayToHex, decode, hexDecoder, uuidDecoder } from "./util.js";
+import { arrayEquals, arrayToHex, decode, hexDecoder } from "./util.js";
+import * as p from "node:path/posix";
 
 export const bunnyFileEntry = Symbol();
 export const bunnyDirectoryEntry = Symbol();
 
-export interface BunnyBasicEntry {
-    type: typeof bunnyFileEntry | typeof bunnyDirectoryEntry;
-    guid: string;
-    storageZoneName: string;
-    path: string;
-    objectName: string;
+export type BunnyType = typeof bunnyFileEntry | typeof bunnyDirectoryEntry;
 
-    fullPath: string;
+export interface BunnyBasicEntry {
+    type: BunnyType;
+    parentPath: string;
+    name: string;
+    path: string;
 
     format(): string;
     delete(recursive: boolean): Promise<void>
@@ -21,6 +21,7 @@ export interface BunnyBasicEntry {
 
 export interface BunnyFileEntry extends BunnyBasicEntry {
     type: typeof bunnyFileEntry;
+
     length: number;
     checksum: Uint8Array;
 
@@ -32,8 +33,8 @@ export interface BunnyFileEntry extends BunnyBasicEntry {
 export interface BunnyDirectoryEntry extends BunnyBasicEntry {
     type: typeof bunnyDirectoryEntry;
 
-    list(subpath?: string): Promise<BunnyListing>;
-    upload(path: string, body: Uint8Array): Promise<BunnyFileEntry>;
+    list(): Promise<BunnyListing>;
+    upload(childPath: string, body: Uint8Array): Promise<BunnyFileEntry>;
 }
 
 export type BunnyEntry = BunnyFileEntry | BunnyDirectoryEntry;
@@ -49,7 +50,6 @@ export function isBunnyDirectory(entry: BunnyEntry): entry is BunnyDirectoryEntr
 
 const bunnyEntryDecoder = pipe(
     D.struct({
-        Guid: uuidDecoder,
         StorageZoneName: D.string,
         Path: D.string,
         ObjectName: D.string,
@@ -57,7 +57,7 @@ const bunnyEntryDecoder = pipe(
         Length: D.number,
         Checksum: D.nullable(hexDecoder)
     }),
-    D.parse(({ Guid, StorageZoneName, Path, ObjectName, IsDirectory, Length, Checksum }) => {
+    D.parse(({ StorageZoneName, Path, ObjectName, IsDirectory, Length, Checksum }) => {
         if (!Path.startsWith(`/${StorageZoneName}/`))
             return D.failure(Path, "Expected path to start with the storage zone name");
         if (ObjectName.includes("/"))
@@ -70,10 +70,8 @@ const bunnyEntryDecoder = pipe(
             cleanPath = "/";
 
         return D.success({
-            guid: Guid,
-            storageZoneName: StorageZoneName,
-            path: cleanPath,
-            objectName: ObjectName,
+            parentPath: cleanPath,
+            name: ObjectName,
             isDirectory: IsDirectory,
             length: Length,
             checksum: Checksum
@@ -90,62 +88,58 @@ function getHost(region?: BunnyRegion): string {
     return `${region}.storage.bunnycdn.com`;
 }
 
-class AbstractBunnyEntry implements BunnyBasicEntry {
+class AbstractBunnyEntry<T extends BunnyType> implements BunnyBasicEntry {
     constructor(
         private readonly storage: BunnyStorage,
-        readonly type: typeof bunnyFileEntry | typeof bunnyDirectoryEntry,
-        readonly guid: string,
-        readonly storageZoneName: string,
-        readonly path: string,
-        readonly objectName: string,
+        readonly type: T,
+        readonly parentPath: string,
+        readonly name: string,
         readonly length: number,
         readonly checksum: Uint8Array
     ) {
         if ((type == bunnyDirectoryEntry) != !checksum)
             throw new Error(`Mismatch between directory flag and presence of checksum`);
-        if (!path.endsWith("/"))
-            throw new Error(`Expected path '${path}' to end with /`)
+        if (!parentPath.endsWith("/"))
+            throw new Error(`Expected parent path '${parentPath}' to end with /`)
     }
 
-    get fullPath() {
-        return `${this.path}${this.objectName}`;
+    get path() {
+        return `${this.parentPath}${this.name}`;
     }
 
-    list(childPath?: string) {
+    list() {
         if (this.type == bunnyFileEntry)
             throw new Error("Cannot list a file");
 
-        let path = this.fullPath;
-        if (childPath) path += `/${childPath}`;
-        return this.storage.list(path);
+        return this.storage.list(this.path);
     }
 
     download(validate?: boolean): Promise<Uint8Array> {
         if (this.type == bunnyDirectoryEntry)
             throw new Error("Cannot download a directory");
 
-        return this.storage.download(this.fullPath, validate && this.checksum);
+        return this.storage.download(this.path, validate && this.checksum);
     }
 
     replace(body: Uint8Array): Promise<BunnyFileEntry> {
         if (this.type == bunnyDirectoryEntry)
             throw new Error("Cannot replace a directory");
 
-        return this.storage.upload(this.fullPath, body);
+        return this.storage.upload(this.path, body);
     }
 
     upload(childPath: string, body: Uint8Array): Promise<BunnyFileEntry> {
         if (this.type == bunnyFileEntry)
             throw new Error("Cannot upload into a file; use 'replace' instead");
 
-        return this.storage.upload(`${this.fullPath}/${childPath}`, body);
+        return this.storage.upload(`${this.path}/${childPath}`, body);
     }
 
     delete(recursive: boolean = false) {
         if (this.type == bunnyDirectoryEntry && !recursive)
             throw new Error("Cannot delete a directory without 'recursive' set to true")
 
-        return this.storage.delete(this.fullPath);
+        return this.storage.delete(this.path);
     }
 
     format(): string {
@@ -159,7 +153,7 @@ class AbstractBunnyEntry implements BunnyBasicEntry {
             symbol = '📁';
         }
 
-        return `${symbol} ${this.objectName}${fileProps}`;
+        return `${symbol} ${this.name}${fileProps}`;
     }
 }
 
@@ -215,10 +209,8 @@ export class BunnyStorage {
         return new AbstractBunnyEntry(
             this,
             entry.isDirectory ? bunnyDirectoryEntry : bunnyFileEntry,
-            entry.guid,
-            entry.storageZoneName,
-            entry.path,
-            entry.objectName,
+            entry.parentPath,
+            entry.name,
             entry.length,
             entry.checksum
         );
@@ -258,13 +250,26 @@ export class BunnyStorage {
 
     async describe(path: string): Promise<BunnyFileEntry> {
         if (path.endsWith("/"))
-            throw new Error(`Cannot download directory '${path}'; file expected`);
+            throw new Error(`Cannot describe directory '${path}'; file expected`);
         const response = await this.fetch(path, { method: "DESCRIBE" });
         if (response.headers.get("Content-Type") != "application/json")
             throw new Error("Unexpected Content-Type in response");
         const json = await response.json();
         const entry = decode(bunnyEntryDecoder, json);
         return this.parseEntry(entry) as BunnyFileEntry;
+    }
+
+    cd(path: string = "/"): BunnyDirectoryEntry {
+        const { dir, base } = p.parse(path);
+
+        return new AbstractBunnyEntry(
+            this,
+            bunnyDirectoryEntry,
+            dir,
+            base,
+            0,
+            undefined
+        );
     }
 
     async list(path?: string): Promise<BunnyListing> {
