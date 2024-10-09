@@ -1,6 +1,6 @@
-import { pipe } from "fp-ts/function";
-import { fold } from "fp-ts/Either";
-import * as D from "io-ts/Decoder";
+import { pipe } from "fp-ts/lib/function.js";
+import { fold } from "fp-ts/lib/Either.js";
+import * as D from "io-ts/lib/Decoder.js";
 
 export function decode<T>(decoder: D.Decoder<unknown, T>, input: unknown): T {
     return pipe(

@@ -1,3 +1,4 @@
+#!/usr/bin/env node
 import {
     command,
     option,
@@ -9,8 +10,7 @@ import {
     boolean,
     flag
 } from "cmd-ts";
-import { ExistingPath } from "cmd-ts/batteries/fs";
-import { BunnyListing, BunnyStorage } from "./storage.js";
+import { type BunnyListing, BunnyStorage } from "./storage.js";
 import { BunnyRegion } from "./region.js";
 import { hexToArray } from "./util.js";
 import * as Algorithms from "./storage-algorithms.js";
@@ -99,7 +99,7 @@ const diff = command({
     name: "diff",
     args: {
         localPath: positional({
-            type: ExistingPath,
+            type: string,
             displayName: "LOCAL-PATH"
         }),
         remotePath: positional({
@@ -132,7 +132,7 @@ const app = subcommands({
     cmds: { cat, diff, ls }
 });
 
-export async function runCLI(args: string[]) {
+async function runCLI(args: string[]) {
     try {
         await run(app, args);
     } catch (ex) {
@@ -141,3 +141,5 @@ export async function runCLI(args: string[]) {
         process.exit(1);
     }
 }
+
+void runCLI(process.argv.slice(2));

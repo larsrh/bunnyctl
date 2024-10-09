@@ -1,8 +1,7 @@
-/* eslint-disable @typescript-eslint/no-unsafe-call */
 import fc from "fast-check";
 import { assert } from "chai";
-import { arrayToHex, hexToArray } from "../util";
-import { hexaString } from "./util";
+import { arrayToHex, hexToArray } from "../util.js";
+import { hexaString } from "./util.js";
 
 describe("Hex to Array", () => {
     it("arrayToHex -> hexToArray", () => {
