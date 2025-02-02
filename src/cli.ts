@@ -10,50 +10,10 @@ import {
     boolean,
     flag
 } from "cmd-ts";
-import { type BunnyListing, BunnyStorage } from "./storage.js";
-import { BunnyRegion } from "./region.js";
+import { type BunnyListing } from "./storage.js";
 import { hexToArray } from "./util.js";
 import * as Algorithms from "./storage-algorithms.js";
-
-interface Config {
-    apiKey?: string;
-    storageZone?: string;
-    region?: string;
-}
-
-const configParser = {
-    apiKey: option({
-        type: optional(string),
-        long: "api-key"
-    }),
-    storageZone: option({
-        type: optional(string),
-        long: "storage-zone"
-    }),
-    region: option({
-        type: optional(string),
-        long: "region"
-    })
-};
-
-function getStorage({
-    apiKey,
-    storageZone,
-    region: rawRegion
-}: Config): BunnyStorage {
-    rawRegion = rawRegion || process.env.BUNNY_REGION;
-    let region: BunnyRegion;
-    if (rawRegion) {
-        if (!(rawRegion in BunnyRegion))
-            throw new Error(`Unknown region '${rawRegion}`);
-        region = BunnyRegion[rawRegion as keyof typeof BunnyRegion];
-    }
-    return new BunnyStorage(
-        apiKey || process.env.BUNNY_API_KEY,
-        storageZone || process.env.BUNNY_STORAGE_ZONE,
-        region
-    );
-}
+import { configParser, getStorage } from "./cli/util.js";
 
 const ls = command({
     name: "ls",
