@@ -2,3 +2,4 @@
 /lib
 .envrc
 bunnyctl-*.tgz
+/coverage

@@ -1,0 +1,24 @@
+[
+    {
+        "scope": "https://storage.bunnycdn.com:443",
+        "method": "DESCRIBE",
+        "path": "/lars-test/test/test1.nope.txt",
+        "body": "",
+        "status": 404,
+        "response": [
+            "1f8b0800000000000003ab56f228292970ce4f4955b2323130d151f24d2d2e4e4c07f294fc93b252934b14fcf24b14dcf24bf352946a012d40e2b72d000000"
+        ],
+        "rawHeaders": {
+            "access-control-allow-headers": "AccessKey, Content-Type",
+            "access-control-allow-methods": "GET, DELETE, POST, PUT, DESCRIBE",
+            "access-control-allow-origin": "*",
+            "connection": "keep-alive",
+            "content-encoding": "gzip",
+            "content-type": "application/json",
+            "date": "Sun, 02 Feb 2025 22:48:58 GMT",
+            "server": "nginx",
+            "transfer-encoding": "chunked"
+        },
+        "responseIsBinary": false
+    }
+]

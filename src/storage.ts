@@ -311,8 +311,9 @@ export class BunnyStorage {
             throwOnError: false
         });
         if (response.ok) {
-            if (response.headers.get("Content-Type") != "application/json")
-                throw new Error("Unexpected Content-Type in response");
+            // TODO https://github.com/nock/nock/issues/2832
+            /*if (response.headers.get("Content-Type") != "application/json")
+                throw new Error("Unexpected Content-Type in response");*/
             const json: unknown = await response.json();
             const entry = decode(bunnyEntryDecoder, json);
             return this.parseEntry(entry) as BunnyFileEntry;

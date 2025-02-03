@@ -1,0 +1,24 @@
+[
+    {
+        "scope": "https://storage.bunnycdn.com:443",
+        "method": "DESCRIBE",
+        "path": "/lars-test/test/test1.txt",
+        "body": "",
+        "status": 200,
+        "response": [
+            "1f8b080000000000000385915b4f02311085ff4b9f29f47ed9b765d93524068d9717df4a77165058485b8cc4f8df6dd5e8a3493369cef4ccf9327d4757e75d8f2aa48c1806d3736cfade61c188c396128db59746690f4c698e26e83e1d83dbc0d37184953b4036ee5d8838414cb97bebd2364bb35f6df65572e766fd0c3efd588a48a7e9ad58ae61dc141365f9ee626ab66edc40216284494c583e0f8c55c254d24c05610502c22b84657e4409a5135487e02eabf3610d015579ce322e7621c71dc3055583db4798a0c7f8ed406b006aac77d808ebb1509c634794c083f7dc5121ad049a339ae398604c0f975321cec2c2256802e4fa0fdcdf864a9eb1445b9be76dc1bfc4f3a1ac5a30296b498c967cce1aadb8346d27886475d751d62a4de7b2e1f39a76b4d65dd3d5b26bb5a40bd5324b4cf9863b38ed77beb0949c58083f3e01b45bc07fcb010000"
+        ],
+        "rawHeaders": {
+            "access-control-allow-headers": "AccessKey, Content-Type",
+            "access-control-allow-methods": "GET, DELETE, POST, PUT, DESCRIBE",
+            "access-control-allow-origin": "*",
+            "connection": "keep-alive",
+            "content-encoding": "gzip",
+            "content-type": "application/json",
+            "date": "Sun, 02 Feb 2025 22:48:58 GMT",
+            "server": "nginx",
+            "transfer-encoding": "chunked"
+        },
+        "responseIsBinary": false
+    }
+]

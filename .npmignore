@@ -7,3 +7,5 @@ lib/test/**/*
 .npmignore
 eslint.config.mjs
 bunnyctl-*.tgz
+fixtures
+coverage
