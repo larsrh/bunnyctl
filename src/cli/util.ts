@@ -1,6 +1,14 @@
-import { boolean, flag, option, optional, string } from "cmd-ts";
+import { boolean, flag, option, optional, string, type Type } from "cmd-ts";
 import { BunnyStorage } from "../storage.js";
 import { BunnyRegion } from "../region.js";
+import * as fs from "node:fs/promises";
+
+export type PathType = "local" | "remote";
+
+export interface TypedPath {
+    type: PathType;
+    path: string;
+}
 
 export interface Config {
     apiKey?: string;
@@ -28,6 +36,43 @@ export const recursive = flag({
     long: "recursive",
     short: "r"
 });
+
+export function parseTypedPath(path: string): [PathType | undefined, string] {
+    if (path.startsWith("local:")) return ["local", path.substring(6)];
+
+    if (path.startsWith("remote:")) return ["remote", path.substring(7)];
+
+    return [undefined, path];
+}
+
+export function typedPath(defaultType?: PathType): Type<string, TypedPath> {
+    return {
+        async from(str) {
+            // eslint-disable-next-line prefer-const
+            let [type, path] = parseTypedPath(str);
+            if (!type) {
+                if (!defaultType) throw new Error("No path type specified");
+                type = defaultType;
+            }
+
+            if (type == "local") {
+                // just check for existence
+                await fs.stat(path);
+            }
+
+            return { type, path };
+        },
+        get displayName() {
+            return "LOCAL-OR-REMOTE-PATH";
+        },
+        get description() {
+            let desc = "";
+            if (defaultType) desc = `, default: ${defaultType}`;
+
+            return `local or remote path with a prefix ('local:' or 'remote:' ${desc})`;
+        }
+    };
+}
 
 export function getStorage({
     apiKey,

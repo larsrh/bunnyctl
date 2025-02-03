@@ -13,7 +13,7 @@ import {
 import { type BunnyListing } from "./storage.js";
 import { hexToArray } from "./util.js";
 import * as Algorithms from "./storage-algorithms.js";
-import { configParser, getStorage, recursive } from "./cli/util.js";
+import { configParser, getStorage, recursive, typedPath } from "./cli/util.js";
 
 const ls = command({
     name: "ls",
@@ -100,9 +100,65 @@ const rm = command({
     }
 });
 
+const cp = command({
+    name: "cp",
+    args: {
+        path1: positional({
+            type: typedPath("local")
+        }),
+        path2: positional({
+            type: typedPath("remote")
+        }),
+        recursive,
+        overwrite: flag({
+            type: boolean,
+            long: "overwrite",
+            short: "o"
+        }),
+        ...configParser
+    },
+    handler: async args => {
+        const { path1, path2 } = args;
+        if (path1.type == path2.type)
+            throw new Error("Specify a local and a remote path");
+
+        const storage = getStorage(args);
+
+        let count = 0;
+
+        const options: Algorithms.CopyOptions = {
+            overwrite: args.overwrite,
+            recursive: args.recursive,
+            // eslint-disable-next-line @typescript-eslint/require-await
+            async progress(entry, changed) {
+                let prefix: string;
+                if (changed) {
+                    prefix = "🔁";
+                    ++count;
+                } else prefix = "🟰";
+                console.log(`[${prefix}] ${entry.format(true)}`);
+            }
+        };
+
+        if (path1.type == "local") {
+            // we gotta upload
+            await Algorithms.uploadPath(
+                storage,
+                path1.path,
+                path2.path,
+                options
+            );
+            console.log(`Uploaded ${count} changed file(s)`);
+        } else {
+            // we gotta download
+            throw new Error("lol");
+        }
+    }
+});
+
 const app = subcommands({
     name: "bunnyctl",
-    cmds: { cat, diff, ls, rm }
+    cmds: { cat, diff, ls, rm, cp }
 });
 
 async function runCLI(args: string[]) {

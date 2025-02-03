@@ -1,7 +1,13 @@
 import { pipe } from "fp-ts/lib/function.js";
 import * as D from "io-ts/lib/Decoder.js";
 import { BunnyRegion } from "./region.js";
-import { arrayEquals, arrayToHex, decode, hexDecoder } from "./util.js";
+import {
+    arrayEquals,
+    arrayToHex,
+    computeChecksum,
+    decode,
+    hexDecoder
+} from "./util.js";
 import * as p from "node:path/posix";
 
 export const bunnyFileEntry = Symbol();
@@ -15,7 +21,7 @@ export interface BunnyBasicEntry {
     name: string;
     path: string;
 
-    format(): string;
+    format(fullPath?: boolean): string;
     delete(recursive: boolean): Promise<void>;
 }
 
@@ -160,7 +166,7 @@ class AbstractBunnyEntry<T extends BunnyType> implements BunnyBasicEntry {
         return this.storage.delete(this.path);
     }
 
-    format(): string {
+    format(fullPath: boolean = false): string {
         let symbol: string;
         let fileProps = "";
         if (this.type == bunnyFileEntry) {
@@ -170,7 +176,11 @@ class AbstractBunnyEntry<T extends BunnyType> implements BunnyBasicEntry {
             symbol = "📁";
         }
 
-        return `${symbol} ${this.name}${fileProps}`;
+        let name: string;
+        if (fullPath) name = this.path;
+        else name = this.name;
+
+        return `${symbol} ${name}${fileProps}`;
     }
 }
 
@@ -178,6 +188,7 @@ interface FetchParameters {
     method?: string;
     checksum?: Uint8Array;
     body?: BodyInit;
+    throwOnError?: boolean;
 }
 
 export class BunnyStorage {
@@ -206,7 +217,7 @@ export class BunnyStorage {
 
     private async fetch(
         path: string,
-        { method, checksum, body }: FetchParameters = {}
+        { method, checksum, body, throwOnError = true }: FetchParameters = {}
     ): Promise<Response> {
         if (path.startsWith("/")) path = path.slice(1);
 
@@ -216,7 +227,7 @@ export class BunnyStorage {
             headers: this.makeRequestHeaders(checksum)
         });
 
-        if (!response.ok)
+        if (!response.ok && throwOnError)
             throw new Error(
                 `Request for path '${path}' failed with status ${response.status}`
             );
@@ -260,17 +271,26 @@ export class BunnyStorage {
         return body;
     }
 
-    async upload(path: string, body: Uint8Array): Promise<BunnyFileEntry> {
+    async upload(
+        path: string,
+        body: Uint8Array,
+        checksum?: Uint8Array
+    ): Promise<BunnyFileEntry> {
         if (path.endsWith("/"))
             throw new Error(`Cannot upload directory '${path}'; file expected`);
 
-        const checksum = new Uint8Array(
-            await crypto.subtle.digest("SHA-256", body)
-        );
+        if (!checksum) checksum = await computeChecksum(body);
 
         await this.fetch(path, { method: "PUT", body, checksum });
 
-        return this.describe(path);
+        const described = await this.describe(path);
+
+        if (!arrayEquals(checksum, described.checksum))
+            throw new Error(
+                `Checksum mismatch: expected ${arrayToHex(checksum)}, received ${arrayToHex(described.checksum)}`
+            );
+
+        return described;
     }
 
     async delete(path: string): Promise<void> {
@@ -278,16 +298,27 @@ export class BunnyStorage {
     }
 
     async describe(path: string): Promise<BunnyFileEntry> {
+        const entry = await this.maybeDescribe(path);
+        if (!entry) throw new Error(`File ${path} not found`);
+        return entry;
+    }
+
+    async maybeDescribe(path: string): Promise<BunnyFileEntry | undefined> {
         if (path.endsWith("/"))
-            throw new Error(
-                `Cannot describe directory '${path}'; file expected`
-            );
-        const response = await this.fetch(path, { method: "DESCRIBE" });
-        if (response.headers.get("Content-Type") != "application/json")
-            throw new Error("Unexpected Content-Type in response");
-        const json: unknown = await response.json();
-        const entry = decode(bunnyEntryDecoder, json);
-        return this.parseEntry(entry) as BunnyFileEntry;
+            throw new Error(`File expected, '${path}' received`);
+        const response = await this.fetch(path, {
+            method: "DESCRIBE",
+            throwOnError: false
+        });
+        if (response.ok) {
+            if (response.headers.get("Content-Type") != "application/json")
+                throw new Error("Unexpected Content-Type in response");
+            const json: unknown = await response.json();
+            const entry = decode(bunnyEntryDecoder, json);
+            return this.parseEntry(entry) as BunnyFileEntry;
+        }
+        if (response.status == 404) return;
+        throw new Error(`Unknown response ${response.status} for path ${path}`);
     }
 
     cd(path: string = "/"): BunnyDirectoryEntry {

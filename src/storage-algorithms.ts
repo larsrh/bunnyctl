@@ -7,7 +7,7 @@ import {
 } from "./storage.js";
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
-import { arrayDiff, arrayEquals, coalesce } from "./util.js";
+import { arrayDiff, arrayEquals, coalesce, computeChecksum } from "./util.js";
 import { Tree } from "./util/tree.js";
 
 export type DifferenceType = "contents" | "type" | "onlyLocal" | "onlyRemote";
@@ -111,6 +111,107 @@ export async function diffPaths(
     if (isBunnyFile(remote)) return diffFiles(localPath, remote);
 
     return diffDirectories(localPath, remote, recursive);
+}
+
+export type CopyProgress = (
+    entry: BunnyFileEntry,
+    changed: boolean
+) => Promise<void>;
+
+export interface CopyOptions {
+    recursive?: boolean;
+    overwrite?: boolean;
+    progress?: CopyProgress;
+}
+
+export async function uploadFile(
+    storage: BunnyStorage,
+    localPath: string,
+    remotePath: string,
+    overwrite: boolean,
+    progress: CopyProgress
+): Promise<BunnyFileEntry> {
+    const maybeEntry = await storage.maybeDescribe(remotePath);
+    const localFile = await fs.readFile(localPath);
+    let checksum: Uint8Array;
+
+    if (maybeEntry) {
+        checksum = await computeChecksum(localFile);
+        if (arrayEquals(checksum, maybeEntry.checksum)) {
+            // file identical, carry on
+            await progress(maybeEntry, false);
+            return;
+        }
+
+        if (!overwrite)
+            throw new Error(
+                `Remote file '${remotePath}' exists, but 'overwrite' not specified`
+            );
+    }
+
+    // file doesn't exist or is different, just upload
+    const entry = await storage.upload(remotePath, localFile, checksum);
+    await progress(entry, true);
+    return entry;
+}
+
+export async function uploadDirectory(
+    storage: BunnyStorage,
+    localPath: string,
+    remoteEntry: BunnyDirectoryEntry,
+    overwrite: boolean,
+    progress: CopyProgress
+): Promise<BunnyFileEntry[]> {
+    const result: BunnyFileEntry[] = [];
+    for (const name of await fs.readdir(localPath)) {
+        const subResult = await uploadPath(
+            storage,
+            path.join(localPath, name),
+            `${remoteEntry.path}/${name}`,
+            { recursive: true, overwrite, progress }
+        );
+        result.push(...subResult);
+    }
+    return result;
+}
+
+export async function uploadPath(
+    storage: BunnyStorage,
+    localPath: string,
+    remotePath: string,
+    options: CopyOptions = {}
+): Promise<BunnyFileEntry[]> {
+    const {
+        overwrite = false,
+        recursive = false,
+        progress = async () => {}
+    } = options;
+
+    const stat = await fs.stat(localPath);
+
+    if (stat.isFile()) {
+        return [
+            await uploadFile(
+                storage,
+                localPath,
+                remotePath,
+                overwrite,
+                progress
+            )
+        ];
+    }
+
+    if (stat.isDirectory()) {
+        if (!recursive)
+            throw new Error(
+                `Local path '${localPath}' is a directory, but 'recursive' not specified`
+            );
+
+        const entry = storage.cd(remotePath);
+        return uploadDirectory(storage, localPath, entry, overwrite, progress);
+    }
+
+    throw new Error("Unknown local path kind, neither file nor directory");
 }
 
 export async function loadPath(

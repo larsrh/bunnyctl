@@ -79,3 +79,7 @@ export function arrayDiff<T>(
 export function coalesce<T>(array: (T | undefined)[]): T[] {
     return array.filter(t => t);
 }
+
+export async function computeChecksum(body: Uint8Array): Promise<Uint8Array> {
+    return new Uint8Array(await crypto.subtle.digest("SHA-256", body));
+}
