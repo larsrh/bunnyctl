@@ -1,4 +1,4 @@
-import { option, optional, string } from "cmd-ts";
+import { boolean, flag, option, optional, string } from "cmd-ts";
 import { BunnyStorage } from "../storage.js";
 import { BunnyRegion } from "../region.js";
 
@@ -22,6 +22,12 @@ export const configParser = {
         long: "region"
     })
 };
+
+export const recursive = flag({
+    type: boolean,
+    long: "recursive",
+    short: "r"
+});
 
 export function getStorage({
     apiKey,

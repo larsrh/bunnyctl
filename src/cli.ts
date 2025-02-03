@@ -13,14 +13,14 @@ import {
 import { type BunnyListing } from "./storage.js";
 import { hexToArray } from "./util.js";
 import * as Algorithms from "./storage-algorithms.js";
-import { configParser, getStorage } from "./cli/util.js";
+import { configParser, getStorage, recursive } from "./cli/util.js";
 
 const ls = command({
     name: "ls",
     args: {
         path: positional({
             type: string,
-            displayName: "PATH"
+            displayName: "REMOTE-PATH"
         }),
         ...configParser
     },
@@ -38,7 +38,7 @@ const cat = command({
     args: {
         path: positional({
             type: string,
-            displayName: "PATH"
+            displayName: "REMOTE-PATH"
         }),
         checksum: option({
             type: optional(string),
@@ -66,11 +66,7 @@ const diff = command({
             type: string,
             displayName: "REMOTE-PATH"
         }),
-        recursive: flag({
-            type: boolean,
-            long: "recursive",
-            short: "r"
-        }),
+        recursive,
         ...configParser
     },
     handler: async args => {
@@ -92,13 +88,9 @@ const rm = command({
     args: {
         path: positional({
             type: string,
-            displayName: "PATH"
+            displayName: "REMOTE-PATH"
         }),
-        recursive: flag({
-            type: boolean,
-            long: "recursive",
-            short: "r"
-        }),
+        recursive,
         ...configParser
     },
     handler: async args => {
