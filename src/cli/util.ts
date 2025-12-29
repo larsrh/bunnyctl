@@ -86,6 +86,17 @@ export function getStorage({
             throw new Error(`Unknown region '${rawRegion}`);
         region = BunnyRegion[rawRegion as keyof typeof BunnyRegion];
     }
+
+    if (!apiKey && !process.env.BUNNY_API_KEY)
+        throw new Error(
+            "API key not specified as parameter nor environment variable"
+        );
+
+    if (!storageZone && !process.env.BUNNY_STORAGE_ZONE)
+        throw new Error(
+            "Storage zone not specified as parameter nor environment variable"
+        );
+
     return new BunnyStorage(
         apiKey || process.env.BUNNY_API_KEY,
         storageZone || process.env.BUNNY_STORAGE_ZONE,
