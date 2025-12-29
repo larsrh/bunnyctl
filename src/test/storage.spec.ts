@@ -36,7 +36,8 @@ describe("Storage", () => {
 
     beforeEach(() => {
         nockBack.setMode(update ? "update" : "lockdown");
-        nockBack.fixtures = path.join(import.meta.dirname, "fixtures");
+        // this used to be import.meta.dirname but somehow that returns `undefined` now??
+        nockBack.fixtures = path.join(__dirname, "fixtures");
     });
 
     afterEach(() => {

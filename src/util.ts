@@ -39,17 +39,16 @@ export function hexToArray(hex: string): Uint8Array {
     return decode(hexDecoder, hex);
 }
 
-export interface ArrayLike<T> extends RelativeIndexable<T> {
-    length: number;
-}
-
 export function arrayEquals<T>(
     expected: ArrayLike<T>,
     actual: ArrayLike<T>
 ): boolean {
     if (expected.length != actual.length) return false;
 
-    for (const i in actual) if (actual[i] != expected[i]) return false;
+    for (let i = 0; i < actual.length; i++) {
+        if (!Object.is(actual[i], expected[i])) return false;
+    }
+
     return true;
 }
 
@@ -80,6 +79,8 @@ export function coalesce<T>(array: (T | undefined)[]): T[] {
     return array.filter(t => t);
 }
 
-export async function computeChecksum(body: Uint8Array): Promise<Uint8Array> {
+export async function computeChecksum(
+    body: Uint8Array<ArrayBuffer>
+): Promise<Uint8Array> {
     return new Uint8Array(await crypto.subtle.digest("SHA-256", body));
 }

@@ -143,14 +143,17 @@ class AbstractBunnyEntry<T extends BunnyType> implements BunnyBasicEntry {
         return this.storage.download(this.path, validate && this.checksum);
     }
 
-    replace(body: Uint8Array): Promise<BunnyFileEntry> {
+    replace(body: Uint8Array<ArrayBuffer>): Promise<BunnyFileEntry> {
         if (this.type == bunnyDirectoryEntry)
             throw new Error("Cannot replace a directory");
 
         return this.storage.upload(this.path, body);
     }
 
-    upload(childPath: string, body: Uint8Array): Promise<BunnyFileEntry> {
+    upload(
+        childPath: string,
+        body: Uint8Array<ArrayBuffer>
+    ): Promise<BunnyFileEntry> {
         if (this.type == bunnyFileEntry)
             throw new Error("Cannot upload into a file; use 'replace' instead");
 
@@ -273,7 +276,7 @@ export class BunnyStorage {
 
     async upload(
         path: string,
-        body: Uint8Array,
+        body: Uint8Array<ArrayBuffer>,
         checksum?: Uint8Array
     ): Promise<BunnyFileEntry> {
         if (path.endsWith("/"))
@@ -281,7 +284,11 @@ export class BunnyStorage {
 
         if (!checksum) checksum = await computeChecksum(body);
 
-        await this.fetch(path, { method: "PUT", body, checksum });
+        await this.fetch(path, {
+            method: "PUT",
+            body,
+            checksum
+        });
 
         const described = await this.describe(path);
 
